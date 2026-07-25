@@ -21,6 +21,15 @@
   <section class="panel controls">
     <h2>操控台 Controls</h2>
 
+    <div class="legend">
+      <h3>穩度指標 Stability</h3>
+      <div class="stability-bar">
+        <div class="stability-fill" id="gmBarFill"></div>
+      </div>
+      <div class="hint">GM = <span id="gmValText">1.0</span> m &nbsp;|&nbsp; 橫傾週期 Roll Period ≈ <span id="rollPeriodText">-</span> s</div>
+      <div class="warning" id="stabilityWarning"></div>
+    </div>
+
     <div class="ctrl-group">
       <label>舵角 Rudder Angle <span id="rudderVal">0°</span></label>
       <input type="range" id="rudderSlider" min="-35" max="35" step="1" value="0">
@@ -70,6 +79,22 @@
     </div>
 
     <div class="ctrl-group">
+      <label>航行場景 Scene</label>
+      <div class="btnrow scene-btnrow" id="sceneBtnRow">
+        <button data-scene="open" class="active">🌊 外海 Open Ocean</button>
+        <button data-scene="approach">🚢 進港航道 Port Approach</button>
+        <button data-scene="berth">⚓ 靠泊碼頭 Berth Alongside</button>
+      </div>
+      <div class="hint" id="sceneDesc">外海放洋航行，海況依海象設定</div>
+    </div>
+
+    <div class="ctrl-group">
+      <label>時刻 Time of Day <span id="timeOfDayVal">12:00</span></label>
+      <input type="range" id="timeOfDaySlider" min="0" max="23.9" step="0.1" value="12">
+      <label class="hint checkbox-line"><input type="checkbox" id="dayNightCycleChk"> 自動日夜循環 Auto Day/Night Cycle</label>
+    </div>
+
+    <div class="ctrl-group">
       <label>裝載狀態 Loading Condition</label>
       <select id="loadCondition">
         <option value="light">壓艙 Light Ballast (GM 大)</option>
@@ -94,15 +119,6 @@
       <label>時間加速 Time Acceleration <span id="timeScaleVal">1x</span></label>
       <input type="range" id="timeScaleSlider" min="1" max="10" step="1" value="1">
     </div>
-
-    <div class="legend">
-      <h3>穩度指標 Stability</h3>
-      <div class="stability-bar">
-        <div class="stability-fill" id="gmBarFill"></div>
-      </div>
-      <div class="hint">GM = <span id="gmValText">1.0</span> m &nbsp;|&nbsp; 橫傾週期 Roll Period ≈ <span id="rollPeriodText">-</span> s</div>
-      <div class="warning" id="stabilityWarning"></div>
-    </div>
   </section>
 
   <!-- CENTER: Views -->
@@ -116,6 +132,7 @@
         <span>ROT <b id="hudRot">0</b> °/min</span>
         <span>HEEL <b id="hudHeel">0.0</b>°</span>
         <span>WIND <b id="hudWind">0</b> kn</span>
+        <span>TOD <b id="hudTime">12:00</b></span>
       </div>
     </div>
     <div class="secondary-views">
@@ -124,8 +141,12 @@
         <canvas id="chartCanvas" width="270" height="220"></canvas>
       </div>
       <div class="view-box">
-        <h3>船艏正視圖（橫傾） Bow View (Heel)</h3>
-        <canvas id="heelCanvas" width="270" height="220"></canvas>
+        <h3>船艏正視圖（3D 船身橫搖） Bow View (3D Ship Roll)</h3>
+        <canvas id="rollCanvas" width="270" height="220"></canvas>
+      </div>
+      <div class="view-box">
+        <h3>3D 側視圖（船身縱搖） 3D Side View (Pitch)</h3>
+        <canvas id="pitchCanvas" width="270" height="220"></canvas>
       </div>
     </div>
   </section>
@@ -139,6 +160,7 @@
       <div class="gauge-box"><canvas id="gaugeRudder" width="180" height="180"></canvas><div class="gauge-label">舵角指示 Rudder</div></div>
       <div class="gauge-box"><canvas id="gaugeROT" width="180" height="180"></canvas><div class="gauge-label">迴轉率 Rate of Turn (°/min)</div></div>
       <div class="gauge-box"><canvas id="gaugeHeel" width="180" height="180"></canvas><div class="gauge-label">傾側儀 Inclinometer</div></div>
+      <div class="gauge-box"><canvas id="gaugeAttitude" width="180" height="180"></canvas><div class="gauge-label">姿態儀 Pitch &amp; Roll</div></div>
       <div class="gauge-box"><canvas id="gaugeRPM" width="180" height="180"></canvas><div class="gauge-label">主機轉速 Engine RPM</div></div>
       <div class="gauge-box"><canvas id="gaugeWind" width="180" height="180"></canvas><div class="gauge-label">風速風向 Wind</div></div>
       <div class="gauge-box"><canvas id="gaugeDepth" width="180" height="180"></canvas><div class="gauge-label">測深儀 Echo Sounder (m)</div></div>
@@ -159,7 +181,7 @@
 <script src="physics.js"></script>
 <script src="audio.js"></script>
 <script src="gauges.js"></script>
-<script src="render.js"></script>
-<script src="main.js"></script>
+<script src="render.js?v=berth-line-8"></script>
+<script src="main.js?v=3d-ship-roll-2"></script>
 </body>
 </html>

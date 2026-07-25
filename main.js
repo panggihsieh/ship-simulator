@@ -20,6 +20,11 @@
   const typhoonDesc = $("typhoonDesc");
   const windDirSlider = $("windDirSlider");
   const windDirVal = $("windDirVal");
+  const sceneBtnRow = $("sceneBtnRow");
+  const sceneDesc = $("sceneDesc");
+  const timeOfDaySlider = $("timeOfDaySlider");
+  const timeOfDayVal = $("timeOfDayVal");
+  const dayNightCycleChk = $("dayNightCycleChk");
   const loadCondition = $("loadCondition");
   const heelInitSlider = $("heelInitSlider");
   const heelInitVal = $("heelInitVal");
@@ -37,7 +42,8 @@
   const topbar = document.querySelector(".topbar");
 
   const chartCanvas = $("chartCanvas");
-  const heelCanvas = $("heelCanvas");
+  const rollCanvas = $("rollCanvas");
+  const pitchCanvas = $("pitchCanvas");
   const bridgeCanvas = $("bridgeCanvas");
 
   const posReadout = $("posReadout");
@@ -50,6 +56,7 @@
   const hudRot = $("hudRot");
   const hudHeel = $("hudHeel");
   const hudWind = $("hudWind");
+  const hudTime = $("hudTime");
 
   const soundToggleBtn = $("soundToggleBtn");
   const volumeSlider = $("volumeSlider");
@@ -59,6 +66,7 @@
   const gaugeRudder = $("gaugeRudder");
   const gaugeROT = $("gaugeROT");
   const gaugeHeel = $("gaugeHeel");
+  const gaugeAttitude = $("gaugeAttitude");
   const gaugeRPM = $("gaugeRPM");
   const gaugeWind = $("gaugeWind");
   const gaugeDepth = $("gaugeDepth");
@@ -130,6 +138,36 @@
     windDirVal.textContent = state.windDir + "°";
   });
 
+  const SCENE_DESC = {
+    open: "外海放洋航行，海況依海象設定",
+    approach: "接近港口航道，海面較平緩，注意浮標與航道界線",
+    berth: "船已靠泊碼頭，水面平靜，適合觀察纜繩與碰墊",
+  };
+  function setScene(v) {
+    state.scene = v;
+    sceneDesc.textContent = SCENE_DESC[state.scene] || "";
+    sceneBtnRow.querySelectorAll("button").forEach((b) => b.classList.toggle("active", b.dataset.scene === v));
+  }
+  sceneBtnRow.querySelectorAll("button").forEach((btn) => {
+    btn.addEventListener("click", () => setScene(btn.dataset.scene));
+  });
+
+  function formatTimeOfDay(t) {
+    const h = Math.floor(t);
+    const m = Math.floor((t - h) * 60);
+    return String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
+  }
+
+  timeOfDaySlider.addEventListener("input", () => {
+    state.timeOfDay = Number(timeOfDaySlider.value);
+    timeOfDayVal.textContent = formatTimeOfDay(state.timeOfDay);
+  });
+
+  dayNightCycleChk.addEventListener("change", () => {
+    state.dayNightCycle = dayNightCycleChk.checked;
+    timeOfDaySlider.disabled = state.dayNightCycle;
+  });
+
   loadCondition.addEventListener("change", () => {
     state.loadCondition = loadCondition.value;
   });
@@ -143,6 +181,9 @@
     state.beaufort = Number(seaSlider.value);
     state.typhoonMode = typhoonMode.value;
     state.windDir = Number(windDirSlider.value);
+    state.scene = sceneBtnRow.querySelector("button.active")?.dataset.scene || "open";
+    state.timeOfDay = Number(timeOfDaySlider.value);
+    state.dayNightCycle = dayNightCycleChk.checked;
     state.loadCondition = loadCondition.value;
     state.heel = Number(heelInitSlider.value);
     state.rudderCmd = 0; state.rudderActual = 0;
@@ -185,6 +226,8 @@
   // ---------- Init state from default UI values ----------
   state.beaufort = Number(seaSlider.value);
   state.windDir = Number(windDirSlider.value);
+  state.scene = sceneBtnRow.querySelector("button.active")?.dataset.scene || "open";
+  state.timeOfDay = Number(timeOfDaySlider.value);
   state.loadCondition = loadCondition.value;
   telegraph.querySelector('[data-eng="0"]').classList.add("active");
 
@@ -219,6 +262,7 @@
     hudRot.textContent = state.rot.toFixed(0);
     hudHeel.textContent = state.heel.toFixed(1);
     hudWind.textContent = sea.windSpeed.toFixed(0);
+    hudTime.textContent = formatTimeOfDay(state.timeOfDay);
   }
 
   function updateGauges(sea) {
@@ -227,6 +271,7 @@
     ShipGauges.drawRudder(gaugeRudder, state.rudderActual);
     ShipGauges.drawROT(gaugeROT, state.rot);
     ShipGauges.drawHeel(gaugeHeel, state.heel);
+    ShipGauges.drawAttitude(gaugeAttitude, state.heel, state.trim);
     ShipGauges.drawRPM(gaugeRPM, state.rpm);
     ShipGauges.drawWind(gaugeWind, sea.windSpeed, state.windDir, state.heading);
     ShipGauges.drawDepth(gaugeDepth, state.depth);
@@ -249,9 +294,14 @@
     }
 
     simClock.textContent = formatClock(state.simTime);
+    if (state.dayNightCycle) {
+      timeOfDaySlider.value = state.timeOfDay.toFixed(1);
+      timeOfDayVal.textContent = formatTimeOfDay(state.timeOfDay);
+    }
 
     ShipRender.renderChart(chartCanvas, state, trail, sea);
-    ShipRender.renderHeelView(heelCanvas, state);
+    ShipRender.renderRollFront(rollCanvas, state);
+    ShipRender.renderPitchSide(pitchCanvas, state);
     ShipRender.renderBridge(bridgeCanvas, state, sea, dt || 0.016);
 
     updateGauges(sea);

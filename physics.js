@@ -39,6 +39,14 @@ const ShipPhysics = (() => {
     critical: { name: "重貨高置 Top-Heavy", gm: 0.15, draftM: 8.5 },
   };
 
+  // ---------- 場景（外海 / 進港 / 靠泊）對照 ----------
+  // shelter: 遮蔽係數，數值越小代表越平靜（港內浪高/擾動衰減越多）
+  const SCENES = {
+    open: { name: "外海 Open Ocean", shelter: 1.0 },
+    approach: { name: "進港航道 Port Approach", shelter: 0.5 },
+    berth: { name: "靠泊碼頭 Berth Alongside", shelter: 0.12 },
+  };
+
   const DEG = Math.PI / 180;
 
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
@@ -65,6 +73,10 @@ const ShipPhysics = (() => {
       beaufort: 3,
       typhoonMode: "none",
       windDir: 45, // deg, direction FROM which wind blows
+      // Scene & day/night
+      scene: "open",
+      timeOfDay: 12,      // hours 0-24
+      dayNightCycle: false,
       // Stability
       loadCondition: "normal",
       gm: 1.4,
@@ -86,14 +98,15 @@ const ShipPhysics = (() => {
   }
 
   function getSeaState(state) {
+    const shelter = (SCENES[state.scene] || SCENES.open).shelter;
     const typ = TYPHOON_TABLE[state.typhoonMode];
     if (typ) {
       return {
         name: typ.name,
         windSpeed: typ.wind,
-        waveHeight: typ.wave,
+        waveHeight: typ.wave * shelter,
         gust: typ.gust,
-        intensity: 12 + (typ.wind / 30), // pushes beyond Beaufort 12 for scaling
+        intensity: (12 + (typ.wind / 30)) * shelter, // pushes beyond Beaufort 12 for scaling
         isTyphoon: true,
       };
     }
@@ -101,9 +114,9 @@ const ShipPhysics = (() => {
     return {
       name: lvl.name,
       windSpeed: lvl.wind,
-      waveHeight: lvl.wave,
+      waveHeight: lvl.wave * shelter,
       gust: 0.08,
-      intensity: lvl.level,
+      intensity: lvl.level * shelter,
       isTyphoon: false,
     };
   }
@@ -114,6 +127,11 @@ const ShipPhysics = (() => {
   function step(state, dt) {
     if (state.paused) return;
     state.simTime += dt;
+
+    if (state.dayNightCycle) {
+      // 1 simulated hour advances per 30 real seconds (before timeScale, which is baked into dt)
+      state.timeOfDay = (state.timeOfDay + dt / 30 + 24) % 24;
+    }
 
     const sea = getSeaState(state);
 
@@ -222,7 +240,7 @@ const ShipPhysics = (() => {
   }
 
   return {
-    BEAUFORT_TABLE, TYPHOON_TABLE, LOAD_CONDITIONS,
+    BEAUFORT_TABLE, TYPHOON_TABLE, LOAD_CONDITIONS, SCENES,
     createState, getSeaState, step, getStabilityStatus, clamp, angDiffDeg,
   };
 })();
