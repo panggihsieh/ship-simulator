@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>船舶操船模擬器 Ship Handling Simulator</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">⚓ 船舶操船模擬器 <span>Ship Handling &amp; Stability Simulator</span></div>
+  <div class="audio-ctrl">
+    <button id="soundToggleBtn">🔇 啟用音效 Enable Sound</button>
+    <input type="range" id="volumeSlider" min="0" max="100" value="60" title="音量 Volume">
+  </div>
+  <div class="clock" id="simClock">00:00:00</div>
+</header>
+
+<main class="layout">
+  <!-- LEFT: Controls -->
+  <section class="panel controls">
+    <h2>操控台 Controls</h2>
+
+    <div class="ctrl-group">
+      <label>舵角 Rudder Angle <span id="rudderVal">0°</span></label>
+      <input type="range" id="rudderSlider" min="-35" max="35" step="1" value="0">
+      <div class="btnrow">
+        <button data-rudder="-35">Hard Port</button>
+        <button data-rudder="0">Midship</button>
+        <button data-rudder="35">Hard Stbd</button>
+      </div>
+    </div>
+
+    <div class="ctrl-group">
+      <label>主機電報 Engine Telegraph <span id="engineVal">STOP</span></label>
+      <div class="telegraph" id="telegraph">
+        <button data-eng="100">Full Ahead</button>
+        <button data-eng="70">Half Ahead</button>
+        <button data-eng="40">Slow Ahead</button>
+        <button data-eng="15">DeadSlow Ahead</button>
+        <button data-eng="0" class="stop">STOP</button>
+        <button data-eng="-15">DeadSlow Astern</button>
+        <button data-eng="-40">Slow Astern</button>
+        <button data-eng="-70">Half Astern</button>
+        <button data-eng="-100">Full Astern</button>
+      </div>
+    </div>
+
+    <div class="ctrl-group">
+      <label>海象 Sea State (Beaufort) <span id="seaVal">3</span></label>
+      <input type="range" id="seaSlider" min="0" max="12" step="1" value="3">
+      <div class="hint" id="seaDesc">微風 Gentle Breeze</div>
+    </div>
+
+    <div class="ctrl-group">
+      <label>颱風模式 Typhoon Mode</label>
+      <select id="typhoonMode">
+        <option value="none" selected>無 None（依海象滑桿）</option>
+        <option value="tropical_storm">熱帶風暴 Tropical Storm</option>
+        <option value="typhoon_mild">輕度颱風 Mild Typhoon</option>
+        <option value="typhoon_medium">中度颱風 Severe Typhoon</option>
+        <option value="typhoon_severe">強烈颱風 Super Typhoon</option>
+      </select>
+      <div class="hint" id="typhoonDesc">未啟動颱風模式</div>
+    </div>
+
+    <div class="ctrl-group">
+      <label>風向 Wind/Wave Direction <span id="windDirVal">45°</span></label>
+      <input type="range" id="windDirSlider" min="0" max="359" step="1" value="45">
+    </div>
+
+    <div class="ctrl-group">
+      <label>裝載狀態 Loading Condition</label>
+      <select id="loadCondition">
+        <option value="light">壓艙 Light Ballast (GM 大)</option>
+        <option value="normal" selected>一般裝載 Normal Loaded</option>
+        <option value="full">滿載 Full Load (GM 小)</option>
+        <option value="critical">重貨高置 Top-Heavy (GM 極小 / 危險)</option>
+      </select>
+    </div>
+
+    <div class="ctrl-group">
+      <label>初始傾側 Initial Heel <span id="heelInitVal">0°</span></label>
+      <input type="range" id="heelInitSlider" min="-20" max="20" step="1" value="0">
+    </div>
+
+    <div class="ctrl-group buttons-row">
+      <button id="resetBtn">🔄 重置 Reset</button>
+      <button id="anchorBtn">⚓ 下錨 Anchor</button>
+      <button id="pauseBtn">⏸ 暫停 Pause</button>
+    </div>
+
+    <div class="ctrl-group">
+      <label>時間加速 Time Acceleration <span id="timeScaleVal">1x</span></label>
+      <input type="range" id="timeScaleSlider" min="1" max="10" step="1" value="1">
+    </div>
+
+    <div class="legend">
+      <h3>穩度指標 Stability</h3>
+      <div class="stability-bar">
+        <div class="stability-fill" id="gmBarFill"></div>
+      </div>
+      <div class="hint">GM = <span id="gmValText">1.0</span> m &nbsp;|&nbsp; 橫傾週期 Roll Period ≈ <span id="rollPeriodText">-</span> s</div>
+      <div class="warning" id="stabilityWarning"></div>
+    </div>
+  </section>
+
+  <!-- CENTER: Views -->
+  <section class="panel views">
+    <div class="view-box bridge-view-box">
+      <h3>🚢 駕駛台視野 Bridge View</h3>
+      <canvas id="bridgeCanvas" width="720" height="380"></canvas>
+      <div class="bridge-hud">
+        <span>HDG <b id="hudHeading">000</b></span>
+        <span>SPD <b id="hudSpeed">0.0</b> kn</span>
+        <span>ROT <b id="hudRot">0</b> °/min</span>
+        <span>HEEL <b id="hudHeel">0.0</b>°</span>
+        <span>WIND <b id="hudWind">0</b> kn</span>
+      </div>
+    </div>
+    <div class="secondary-views">
+      <div class="view-box">
+        <h3>俯視航跡圖 Top-Down Chart</h3>
+        <canvas id="chartCanvas" width="270" height="220"></canvas>
+      </div>
+      <div class="view-box">
+        <h3>船艏正視圖（橫傾） Bow View (Heel)</h3>
+        <canvas id="heelCanvas" width="270" height="220"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- RIGHT: Instruments -->
+  <section class="panel instruments">
+    <h2>儀表板 Instrument Panel</h2>
+    <div class="gauge-grid">
+      <div class="gauge-box"><canvas id="gaugeCompass" width="180" height="180"></canvas><div class="gauge-label">羅經 Heading</div></div>
+      <div class="gauge-box"><canvas id="gaugeSpeed" width="180" height="180"></canvas><div class="gauge-label">船速 Speed (kn)</div></div>
+      <div class="gauge-box"><canvas id="gaugeRudder" width="180" height="180"></canvas><div class="gauge-label">舵角指示 Rudder</div></div>
+      <div class="gauge-box"><canvas id="gaugeROT" width="180" height="180"></canvas><div class="gauge-label">迴轉率 Rate of Turn (°/min)</div></div>
+      <div class="gauge-box"><canvas id="gaugeHeel" width="180" height="180"></canvas><div class="gauge-label">傾側儀 Inclinometer</div></div>
+      <div class="gauge-box"><canvas id="gaugeRPM" width="180" height="180"></canvas><div class="gauge-label">主機轉速 Engine RPM</div></div>
+      <div class="gauge-box"><canvas id="gaugeWind" width="180" height="180"></canvas><div class="gauge-label">風速風向 Wind</div></div>
+      <div class="gauge-box"><canvas id="gaugeDepth" width="180" height="180"></canvas><div class="gauge-label">測深儀 Echo Sounder (m)</div></div>
+    </div>
+    <div class="readout">
+      <table>
+        <tr><td>Position</td><td id="posReadout">0.0, 0.0 nm</td></tr>
+        <tr><td>Course Over Ground</td><td id="cogReadout">000°</td></tr>
+        <tr><td>Trim</td><td id="trimReadout">0.0°</td></tr>
+        <tr><td>Roll Amplitude</td><td id="rollAmpReadout">0.0°</td></tr>
+      </table>
+    </div>
+  </section>
+</main>
+
+<footer class="statusbar" id="statusBar">系統就緒 System Ready</footer>
+
+<script src="physics.js"></script>
+<script src="audio.js"></script>
+<script src="gauges.js"></script>
+<script src="render.js"></script>
+<script src="main.js"></script>
+</body>
+</html>
