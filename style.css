@@ -130,11 +130,28 @@ select {
   margin-top: 4px;
 }
 
+.checkbox-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.checkbox-line input[type="checkbox"] {
+  accent-color: var(--accent, #2fd0e0);
+}
+
 .btnrow, .buttons-row {
   display: flex;
   gap: 6px;
   margin-top: 8px;
   flex-wrap: wrap;
+}
+
+.scene-btnrow {
+  flex-direction: column;
+}
+.scene-btnrow button {
+  text-align: left;
 }
 
 button {
@@ -240,7 +257,7 @@ button.active {
 
 .secondary-views {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
 }
 .secondary-views canvas {

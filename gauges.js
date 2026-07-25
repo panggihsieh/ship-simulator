@@ -269,6 +269,98 @@ const ShipGauges = (() => {
     ctx.fillText(windSpeedKn.toFixed(0) + " kn", cx, cy + r * 0.55);
   }
 
+  // 姿態儀 Attitude Indicator (artificial horizon): shows roll (heel) as bank angle
+  // and pitch (trim) as vertical horizon offset, aircraft-instrument style.
+  function drawAttitude(canvas, heelDeg, trimDeg) {
+    const ctx = clearCanvas(canvas);
+    const { cx, cy, r } = center(canvas);
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    // clip to circular bezel
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, TAU);
+    ctx.save();
+    ctx.clip();
+
+    // pitch shifts horizon vertically (px per degree), roll rotates it
+    const pxPerDeg = 4;
+    ctx.rotate(heelDeg * Math.PI / 180);
+    const horizonY = clampVal(trimDeg * pxPerDeg, -r, r);
+
+    // sky
+    ctx.fillStyle = "#3a6a8a";
+    ctx.fillRect(-r * 2, -r * 2, r * 4, r * 2 + horizonY);
+    // sea
+    ctx.fillStyle = "#144a5c";
+    ctx.fillRect(-r * 2, horizonY, r * 4, r * 2);
+    // horizon line
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-r * 2, horizonY); ctx.lineTo(r * 2, horizonY);
+    ctx.stroke();
+
+    // pitch ladder marks every 5 deg
+    ctx.strokeStyle = "rgba(255,255,255,0.5)";
+    ctx.font = "9px monospace";
+    ctx.fillStyle = "rgba(255,255,255,0.7)";
+    ctx.textAlign = "center";
+    for (let d = -20; d <= 20; d += 5) {
+      if (d === 0) continue;
+      const y = horizonY - d * pxPerDeg;
+      if (y < -r || y > r) continue;
+      const halfW = d % 10 === 0 ? 22 : 12;
+      ctx.beginPath();
+      ctx.moveTo(-halfW, y); ctx.lineTo(halfW, y);
+      ctx.stroke();
+      if (d % 10 === 0) ctx.fillText(String(Math.abs(d)), halfW + 10, y + 3);
+    }
+    ctx.restore(); // end clip
+
+    // bezel ring + roll scale ticks (fixed, not rotated with roll)
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, TAU);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "#2fd0e0";
+    ctx.stroke();
+    [-60, -30, -20, -10, 0, 10, 20, 30, 60].forEach((a) => {
+      const ang = (a - 90) * Math.PI / 180;
+      const x1 = Math.cos(ang) * (r - 4), y1 = Math.sin(ang) * (r - 4);
+      const x2 = Math.cos(ang) * (r - 12), y2 = Math.sin(ang) * (r - 12);
+      ctx.beginPath();
+      ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+      ctx.strokeStyle = "#7fa0b5";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    });
+
+    // fixed ship reference (gull-wing symbol) + roll pointer triangle
+    ctx.strokeStyle = "#ffb454";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.4, 0); ctx.lineTo(-r * 0.12, 0);
+    ctx.moveTo(r * 0.12, 0); ctx.lineTo(r * 0.4, 0);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 0, 3, 0, TAU);
+    ctx.fillStyle = "#ffb454";
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(0, -r + 6); ctx.lineTo(-6, -r + 16); ctx.lineTo(6, -r + 16);
+    ctx.closePath();
+    ctx.fillStyle = "#ffb454";
+    ctx.fill();
+
+    ctx.restore();
+
+    ctx.fillStyle = Math.abs(heelDeg) > 15 || Math.abs(trimDeg) > 3 ? "#ff5c5c" : "#fff";
+    ctx.font = "bold 12px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(`R${heelDeg.toFixed(1)}° P${trimDeg.toFixed(1)}°`, cx, cy + r * 0.7);
+  }
+  function clampVal(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
   function drawDepth(canvas, depthM) {
     const ctx = clearCanvas(canvas);
     const { cx, cy, r } = center(canvas);
@@ -291,6 +383,6 @@ const ShipGauges = (() => {
   }
 
   return {
-    drawCompass, drawSpeed, drawRudder, drawROT, drawHeel, drawRPM, drawWind, drawDepth,
+    drawCompass, drawSpeed, drawRudder, drawROT, drawHeel, drawAttitude, drawRPM, drawWind, drawDepth,
   };
 })();
