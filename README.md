@@ -1,2 +1,2 @@
 # ship-simulator
-操船模擬 體會海象 船舶３軸運動與外界交互狀況
+By Claude Sonnet 5 in Zed IDE. 2026.7.25
