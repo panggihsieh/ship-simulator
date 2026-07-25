@@ -20,9 +20,27 @@
 ### 🕹️ 操船模擬
 - 舵角控制（-35°～+35°，含 Hard Port / Midship / Hard Starboard 快捷鍵）
 - 九檔主機電報（Full/Half/Slow/Dead Slow Ahead、STOP、Dead Slow/Slow/Half/Full Astern）
+- 中央駕駛台提供擬真船舵與主機車鐘，並與左側操控台雙向同步
 - 採用 Nomoto 一階操縱運動模型計算迴轉率與艏向變化
 - 速度模型：主機推力遲滯反應、轉舵與海象造成的阻力增加
 - 下錨、暫停、時間加速功能
+
+### 🎛️ v3 互動操船控制
+
+#### 船舵 Helm Wheel
+- 使用滑鼠或觸控沿船舵拖曳，控制 `PORT 35°` 至 `STBD 35°`
+- 雙擊船舵或按下 `MIDSHIPS` 可立即回正
+- 船舵取得焦點後，可用 `←`／`→` 微調 1°；搭配 `Shift` 每次調整 5°
+- 中央船舵、左側舵角滑桿與快捷按鈕會同步更新
+
+#### 主機車鐘 Engine Order Telegraph
+- 使用 `－` 往倒俥方向退一檔，使用 `＋` 往前進方向升一檔
+- 正確九段檔位順序：
+
+  `Full Astern → Half Astern → Slow Astern → Dead Slow Astern → STOP → Dead Slow Ahead → Slow Ahead → Half Ahead → Full Ahead`
+
+- 車鐘取得焦點後，可使用方向鍵逐檔操作；按 `Home` 或 `0` 回到 `STOP`
+- 中央機械拉桿、檔位讀數與左側主機電報按鈕會同步更新
 
 ### 📊 儀表板（Canvas 繪製指針式儀表）
 | 儀表 | 說明 |
