@@ -52,12 +52,7 @@ const ShipRender = (() => {
 
     const phase = getDayPhase(state.timeOfDay);
 
-    const isBerth = state.scene === "berth";
-
-    // Berthing uses a brighter instructional-chart blue like the supplied reference.
-    ctx.fillStyle = isBerth
-      ? lerpColor("#82c4ec", "#061827", phase.nightFactor)
-      : lerpColor("#0a2a38", "#04101a", phase.nightFactor);
+    ctx.fillStyle = lerpColor("#0a2a38", "#04101a", phase.nightFactor);
     ctx.fillRect(0, 0, w, h);
 
     const scale = 18; // px per nm
@@ -105,75 +100,21 @@ const ShipRender = (() => {
       ctx.restore();
     }
 
-    let berthQuayEdge = null;
-    if (isBerth) {
-      berthQuayEdge = cx - 34;
-
-      // Dashed approach track and two ghost positions show the manoeuvre into the berth.
-      ctx.save();
-      ctx.setLineDash([6, 5]);
-      ctx.strokeStyle = "rgba(255,255,255,0.52)";
-      ctx.lineWidth = 1.5;
+    // Berth scene keeps the original chart and adds only a fixed port-side berth line.
+    if (state.scene === "berth") {
+      const berthLineX = 18;
+      ctx.strokeStyle = phase.nightFactor > 0.5 ? "#718896" : "#9fb4bf";
+      ctx.lineWidth = 5;
       ctx.beginPath();
-      ctx.moveTo(w - 10, h - 12);
-      ctx.bezierCurveTo(w - 65, h - 30, cx + 48, cy + 42, cx + 8, cy + 12);
+      ctx.moveTo(berthLineX, 10);
+      ctx.lineTo(berthLineX, h - 10);
       ctx.stroke();
-      ctx.setLineDash([]);
-
-      function drawApproachShip(x, y, angleDeg, alpha) {
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(angleDeg * DEG);
-        ctx.globalAlpha = alpha;
-        ctx.beginPath();
-        ctx.moveTo(0, -18);
-        ctx.quadraticCurveTo(-10, -8, -9, 12);
-        ctx.lineTo(0, 17);
-        ctx.lineTo(9, 12);
-        ctx.quadraticCurveTo(10, -8, 0, -18);
-        ctx.closePath();
-        ctx.fillStyle = "#d8d3ad";
-        ctx.fill();
-        ctx.strokeStyle = "#4c5d66";
-        ctx.stroke();
-        ctx.fillStyle = "#eef2df";
-        ctx.fillRect(-5, -7, 10, 13);
-        ctx.fillStyle = "#66727a";
-        ctx.fillRect(-5, 8, 10, 5);
-        ctx.restore();
-      }
-      drawApproachShip(cx + 78, cy + 73, -26, 0.32);
-      drawApproachShip(cx + 40, cy + 39, -14, 0.5);
-      ctx.restore();
-
-      // Fixed quay on the port side with bollards and white cylindrical fenders.
-      ctx.fillStyle = phase.nightFactor > 0.5 ? "#2a2c31" : "#57575b";
-      ctx.fillRect(0, 0, berthQuayEdge, h);
-      ctx.fillStyle = phase.nightFactor > 0.5 ? "#767b82" : "#999b9e";
-      ctx.fillRect(berthQuayEdge - 7, 0, 7, h);
-      ctx.strokeStyle = "#d7e6ef";
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = "rgba(215,230,239,0.85)";
+      ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(berthQuayEdge, 0);
-      ctx.lineTo(berthQuayEdge, h);
+      ctx.moveTo(berthLineX + 3, 10);
+      ctx.lineTo(berthLineX + 3, h - 10);
       ctx.stroke();
-
-      for (let y = 23; y < h; y += 42) {
-        ctx.fillStyle = "#111820";
-        ctx.fillRect(berthQuayEdge - 13, y - 5, 8, 10);
-        ctx.beginPath();
-        ctx.arc(berthQuayEdge + 4, y + 10, 4, 0, Math.PI * 2);
-        ctx.fillStyle = "#f2f5f6";
-        ctx.fill();
-        ctx.strokeStyle = "#667a86";
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-
-      ctx.fillStyle = phase.nightFactor > 0.5 ? "#d7e6ef" : "#263d4b";
-      ctx.font = "bold 9px monospace";
-      ctx.textAlign = "right";
-      ctx.fillText("APPROACH", w - 8, h - 8);
     }
 
     // trail
@@ -189,10 +130,9 @@ const ShipRender = (() => {
       ctx.stroke();
     }
 
-    // Wind direction arrow; move it clear of the quay in the berthing diagram.
-    const windX = isBerth ? w - 30 : 30;
+    // wind direction arrow (top-left corner)
     ctx.save();
-    ctx.translate(windX, 30);
+    ctx.translate(30, 30);
     ctx.rotate(state.windDir * DEG);
     ctx.beginPath();
     ctx.moveTo(0, -14); ctx.lineTo(-6, 0); ctx.lineTo(6, 0); ctx.closePath();
@@ -206,21 +146,20 @@ const ShipRender = (() => {
     ctx.restore();
     ctx.fillStyle = "#7fa0b5";
     ctx.font = "10px monospace";
-    ctx.textAlign = isBerth ? "right" : "left";
-    ctx.fillText("WIND", isBerth ? w - 44 : 44, 34);
+    ctx.textAlign = "left";
+    ctx.fillText("WIND", 44, 34);
 
     // ship (center, fixed heading-up not used here — north-up display)
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(state.heading * DEG);
-    if (isBerth) ctx.scale(1.7, 1.7);
     ctx.beginPath();
     ctx.moveTo(0, -14);
     ctx.lineTo(-7, 10);
     ctx.lineTo(0, 6);
     ctx.lineTo(7, 10);
     ctx.closePath();
-    ctx.fillStyle = isBerth ? "#d8d3ad" : "#ffb454";
+    ctx.fillStyle = "#ffb454";
     ctx.fill();
     ctx.strokeStyle = "#fff";
     ctx.lineWidth = 1;
@@ -228,44 +167,12 @@ const ShipRender = (() => {
 
     ctx.restore();
 
-    if (isBerth) {
-      // Bow/stern breast and spring lines connect the ship to fixed quay bollards.
-      const shipScale = 1.7;
-      const sinH = Math.sin(state.heading * DEG);
-      const cosH = Math.cos(state.heading * DEG);
-      const shipPoint = (lx, ly) => ({
-        x: cx + (lx * cosH - ly * sinH) * shipScale,
-        y: cy + (lx * sinH + ly * cosH) * shipScale,
-      });
-      const portBow = shipPoint(-5, -9);
-      const portStern = shipPoint(-5, 8);
-      const bollardX = berthQuayEdge - 9;
-      const lines = [
-        [portBow, { x: bollardX, y: cy - 34 }],
-        [portBow, { x: bollardX, y: cy + 34 }],
-        [portStern, { x: bollardX, y: cy - 34 }],
-        [portStern, { x: bollardX, y: cy + 34 }],
-      ];
-      ctx.strokeStyle = "rgba(255,255,255,0.9)";
-      ctx.lineWidth = 1.3;
-      lines.forEach(([from, to]) => {
-        ctx.beginPath();
-        ctx.moveTo(from.x, from.y);
-        ctx.lineTo(to.x, to.y);
-        ctx.stroke();
-      });
-      ctx.fillStyle = "#eef4f6";
-      ctx.font = "8px monospace";
-      ctx.textAlign = "left";
-      ctx.fillText("BOW / STERN SPRINGS", berthQuayEdge + 8, 16);
-    } else {
-      // Range rings are useful offshore but would clutter the berthing plan.
-      ctx.strokeStyle = "rgba(127,160,181,0.25)";
-      for (let ring = 1; ring <= 3; ring++) {
-        ctx.beginPath();
-        ctx.arc(cx, cy, ring * scale * 2, 0, Math.PI * 2);
-        ctx.stroke();
-      }
+    // range rings
+    ctx.strokeStyle = "rgba(127,160,181,0.25)";
+    for (let ring = 1; ring <= 3; ring++) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, ring * scale * 2, 0, Math.PI * 2);
+      ctx.stroke();
     }
   }
 
