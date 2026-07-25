@@ -40,6 +40,16 @@
   const simClock = $("simClock");
   const statusBar = $("statusBar");
   const topbar = document.querySelector(".topbar");
+  const helmWheel = $("helmWheel");
+  const helmCommand = $("helmCommand");
+  const helmAngleReadout = $("helmAngleReadout");
+  const helmMidshipBtn = $("helmMidshipBtn");
+  const centralTelegraph = $("centralTelegraph");
+  const telegraphLever = $("telegraphLever");
+  const telegraphCommand = $("telegraphCommand");
+  const telegraphNotch = $("telegraphNotch");
+  const telegraphMinus = $("telegraphMinus");
+  const telegraphPlus = $("telegraphPlus");
 
   const chartCanvas = $("chartCanvas");
   const rollCanvas = $("rollCanvas");
@@ -72,30 +82,46 @@
   const gaugeDepth = $("gaugeDepth");
 
   // ---------- Control bindings ----------
+  const RUDDER_LIMIT = 35;
+  const WHEEL_DEGREES_PER_RUDDER_DEGREE = 9;
+  const ENGINE_NOTCHES = [-100, -70, -40, -15, 0, 15, 40, 70, 100];
+
+  function rudderCommandLabel(v) {
+    const angle = Math.abs(Math.round(v));
+    if (angle === 0) return "MIDSHIPS";
+    return `${v < 0 ? "PORT" : "STBD"} ${angle}°`;
+  }
+
+  function renderRudderCommand(v) {
+    const angle = Math.round(ShipPhysics.clamp(v, -RUDDER_LIMIT, RUDDER_LIMIT));
+    const label = rudderCommandLabel(angle);
+    rudderSlider.value = angle;
+    rudderVal.textContent = angle + "°";
+    helmCommand.textContent = label;
+    helmAngleReadout.textContent = angle + "°";
+    helmWheel.style.transform = `rotate(${angle * WHEEL_DEGREES_PER_RUDDER_DEGREE}deg)`;
+    helmWheel.setAttribute("aria-valuenow", String(angle));
+    helmWheel.setAttribute("aria-valuetext", label);
+    document.querySelectorAll("#rudderSlider ~ .btnrow button").forEach((btn) => {
+      btn.classList.toggle("active", Number(btn.dataset.rudder) === angle);
+    });
+  }
+
+  function setRudderCommand(v, options = {}) {
+    const angle = Math.round(ShipPhysics.clamp(v, -RUDDER_LIMIT, RUDDER_LIMIT));
+    state.rudderCmd = angle;
+    renderRudderCommand(angle);
+    if (options.sound !== false && ShipAudio.isEnabled()) ShipAudio.rudderMove();
+    if (options.status !== false) statusBar.textContent = `舵令 ${rudderCommandLabel(angle)} · Helm order`;
+  }
+
   rudderSlider.addEventListener("input", () => {
-    state.rudderCmd = Number(rudderSlider.value);
-    rudderVal.textContent = state.rudderCmd + "°";
-    if (ShipAudio.isEnabled()) ShipAudio.rudderMove();
+    setRudderCommand(Number(rudderSlider.value));
   });
 
   document.querySelectorAll("#rudderSlider ~ .btnrow button").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const v = Number(btn.dataset.rudder);
-      rudderSlider.value = v;
-      state.rudderCmd = v;
-      rudderVal.textContent = v + "°";
-      if (ShipAudio.isEnabled()) ShipAudio.rudderMove();
-    });
-  });
-
-  telegraph.querySelectorAll("button").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const v = Number(btn.dataset.eng);
-      state.enginePercent = v;
-      engineVal.textContent = engineLabel(v);
-      telegraph.querySelectorAll("button").forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-      if (ShipAudio.isEnabled()) ShipAudio.telegraphBell();
+      setRudderCommand(Number(btn.dataset.rudder));
     });
   });
 
@@ -109,6 +135,129 @@
     else if (mag <= 70) tag = "HALF";
     return `${tag} ${dir}`;
   }
+
+  function engineNotchIndex(v) {
+    let nearestIndex = 0;
+    let nearestDistance = Infinity;
+    ENGINE_NOTCHES.forEach((notch, index) => {
+      const distance = Math.abs(v - notch);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestIndex = index;
+      }
+    });
+    return nearestIndex;
+  }
+
+  function renderEngineCommand(v) {
+    const index = engineNotchIndex(v);
+    const notch = ENGINE_NOTCHES[index];
+    const label = engineLabel(notch);
+    const leverAngle = (index - 4) * 17.5;
+    engineVal.textContent = label;
+    telegraphCommand.textContent = label;
+    telegraphNotch.textContent = `${index + 1} / ${ENGINE_NOTCHES.length}`;
+    telegraphLever.style.transform = `rotate(${leverAngle}deg)`;
+    centralTelegraph.setAttribute("aria-valuenow", String(index));
+    centralTelegraph.setAttribute("aria-valuetext", label);
+    centralTelegraph.dataset.direction = notch < 0 ? "astern" : notch > 0 ? "ahead" : "stop";
+    telegraphMinus.disabled = index === 0;
+    telegraphPlus.disabled = index === ENGINE_NOTCHES.length - 1;
+    telegraph.querySelectorAll("button").forEach((btn) => {
+      btn.classList.toggle("active", Number(btn.dataset.eng) === notch);
+    });
+  }
+
+  function setEngineCommand(v, options = {}) {
+    const index = engineNotchIndex(v);
+    const notch = ENGINE_NOTCHES[index];
+    state.enginePercent = notch;
+    renderEngineCommand(notch);
+    if (options.sound !== false && ShipAudio.isEnabled()) ShipAudio.telegraphBell();
+    if (options.status !== false) statusBar.textContent = `主機車鐘 ${engineLabel(notch)} · Engine order`;
+  }
+
+  function shiftEngineNotch(delta) {
+    const currentIndex = engineNotchIndex(state.enginePercent);
+    const nextIndex = ShipPhysics.clamp(currentIndex + delta, 0, ENGINE_NOTCHES.length - 1);
+    if (nextIndex !== currentIndex) setEngineCommand(ENGINE_NOTCHES[nextIndex]);
+  }
+
+  telegraph.querySelectorAll("button").forEach((btn) => {
+    btn.addEventListener("click", () => setEngineCommand(Number(btn.dataset.eng)));
+  });
+
+  telegraphMinus.addEventListener("click", () => shiftEngineNotch(-1));
+  telegraphPlus.addEventListener("click", () => shiftEngineNotch(1));
+  centralTelegraph.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowLeft" || event.key === "ArrowDown" || event.key === "-") {
+      event.preventDefault();
+      shiftEngineNotch(-1);
+    } else if (event.key === "ArrowRight" || event.key === "ArrowUp" || event.key === "+") {
+      event.preventDefault();
+      shiftEngineNotch(1);
+    } else if (event.key === "Home" || event.key === "0") {
+      event.preventDefault();
+      setEngineCommand(0);
+    }
+  });
+
+  let helmPointerId = null;
+  let helmPointerAngle = 0;
+  let helmDragRotation = 0;
+
+  function pointerAngleOnWheel(event) {
+    const rect = helmWheel.getBoundingClientRect();
+    return Math.atan2(
+      event.clientY - (rect.top + rect.height / 2),
+      event.clientX - (rect.left + rect.width / 2)
+    ) * 180 / Math.PI;
+  }
+
+  helmWheel.addEventListener("pointerdown", (event) => {
+    helmPointerId = event.pointerId;
+    helmPointerAngle = pointerAngleOnWheel(event);
+    helmDragRotation = state.rudderCmd * WHEEL_DEGREES_PER_RUDDER_DEGREE;
+    helmWheel.setPointerCapture(event.pointerId);
+    helmWheel.classList.add("dragging");
+    if (ShipAudio.isEnabled()) ShipAudio.rudderMove();
+    event.preventDefault();
+  });
+
+  helmWheel.addEventListener("pointermove", (event) => {
+    if (event.pointerId !== helmPointerId) return;
+    const nextPointerAngle = pointerAngleOnWheel(event);
+    let delta = nextPointerAngle - helmPointerAngle;
+    if (delta > 180) delta -= 360;
+    if (delta < -180) delta += 360;
+    helmDragRotation = ShipPhysics.clamp(
+      helmDragRotation + delta,
+      -RUDDER_LIMIT * WHEEL_DEGREES_PER_RUDDER_DEGREE,
+      RUDDER_LIMIT * WHEEL_DEGREES_PER_RUDDER_DEGREE
+    );
+    helmPointerAngle = nextPointerAngle;
+    setRudderCommand(helmDragRotation / WHEEL_DEGREES_PER_RUDDER_DEGREE, { sound: false });
+  });
+
+  function finishHelmDrag(event) {
+    if (event.pointerId !== helmPointerId) return;
+    helmWheel.classList.remove("dragging");
+    if (helmWheel.hasPointerCapture(event.pointerId)) helmWheel.releasePointerCapture(event.pointerId);
+    helmPointerId = null;
+  }
+  helmWheel.addEventListener("pointerup", finishHelmDrag);
+  helmWheel.addEventListener("pointercancel", finishHelmDrag);
+  helmWheel.addEventListener("dblclick", () => setRudderCommand(0));
+  helmWheel.addEventListener("keydown", (event) => {
+    let next = state.rudderCmd;
+    if (event.key === "ArrowLeft") next -= event.shiftKey ? 5 : 1;
+    else if (event.key === "ArrowRight") next += event.shiftKey ? 5 : 1;
+    else if (event.key === "Home" || event.key === "0") next = 0;
+    else return;
+    event.preventDefault();
+    setRudderCommand(next);
+  });
+  helmMidshipBtn.addEventListener("click", () => setRudderCommand(0));
 
   seaSlider.addEventListener("input", () => {
     state.beaufort = Number(seaSlider.value);
@@ -186,12 +335,10 @@
     state.dayNightCycle = dayNightCycleChk.checked;
     state.loadCondition = loadCondition.value;
     state.heel = Number(heelInitSlider.value);
-    state.rudderCmd = 0; state.rudderActual = 0;
-    state.enginePercent = 0; state.engineActual = 0;
-    rudderSlider.value = 0; rudderVal.textContent = "0°";
-    engineVal.textContent = "STOP";
-    telegraph.querySelectorAll("button").forEach((b) => b.classList.remove("active"));
-    telegraph.querySelector('[data-eng="0"]').classList.add("active");
+    state.rudderActual = 0;
+    state.engineActual = 0;
+    setRudderCommand(0, { sound: false, status: false });
+    setEngineCommand(0, { sound: false, status: false });
     trail.length = 0;
     statusBar.textContent = "已重置 Simulation Reset";
   });
@@ -229,7 +376,8 @@
   state.scene = sceneBtnRow.querySelector("button.active")?.dataset.scene || "open";
   state.timeOfDay = Number(timeOfDaySlider.value);
   state.loadCondition = loadCondition.value;
-  telegraph.querySelector('[data-eng="0"]').classList.add("active");
+  renderRudderCommand(state.rudderCmd);
+  renderEngineCommand(state.enginePercent);
 
   // ---------- Main loop ----------
   function formatClock(totalSeconds) {
