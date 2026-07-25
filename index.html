@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>船舶操船模擬器 Ship Handling Simulator</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=ship-controls-10">
 </head>
 <body>
 <header class="topbar">
@@ -149,6 +149,102 @@
         <canvas id="pitchCanvas" width="270" height="220"></canvas>
       </div>
     </div>
+    <div class="bridge-controls" aria-label="中央操船控制 Bridge controls">
+      <section class="control-pedestal helm-pedestal">
+        <div class="control-title">
+          <div>
+            <span class="control-kicker">STEERING CONTROL</span>
+            <h3>船舵 Helm Wheel</h3>
+          </div>
+          <div class="control-command">
+            <span>ORDER</span>
+            <strong id="helmCommand">MIDSHIPS</strong>
+          </div>
+        </div>
+        <div class="helm-station">
+          <span class="helm-side port">PORT</span>
+          <div
+            class="helm-wheel"
+            id="helmWheel"
+            role="slider"
+            tabindex="0"
+            aria-label="船舵命令 Helm order"
+            aria-valuemin="-35"
+            aria-valuemax="35"
+            aria-valuenow="0"
+            aria-valuetext="Midships"
+          >
+            <span class="wheel-marker" aria-hidden="true"></span>
+            <span class="wheel-spoke spoke-1" aria-hidden="true"></span>
+            <span class="wheel-spoke spoke-2" aria-hidden="true"></span>
+            <span class="wheel-spoke spoke-3" aria-hidden="true"></span>
+            <span class="wheel-spoke spoke-4" aria-hidden="true"></span>
+            <span class="wheel-spoke spoke-5" aria-hidden="true"></span>
+            <span class="wheel-spoke spoke-6" aria-hidden="true"></span>
+            <span class="wheel-spoke spoke-7" aria-hidden="true"></span>
+            <span class="wheel-spoke spoke-8" aria-hidden="true"></span>
+            <span class="wheel-hub" aria-hidden="true"></span>
+          </div>
+          <span class="helm-side starboard">STBD</span>
+        </div>
+        <div class="helm-footer">
+          <button type="button" id="helmMidshipBtn">MIDSHIPS</button>
+          <span>拖曳轉舵 · Drag wheel / ← →</span>
+          <strong id="helmAngleReadout">0°</strong>
+        </div>
+      </section>
+
+      <section class="control-pedestal telegraph-pedestal">
+        <div class="control-title">
+          <div>
+            <span class="control-kicker">ENGINE ORDER TELEGRAPH</span>
+            <h3>主機車鐘 Engine Telegraph</h3>
+          </div>
+          <div class="control-command engine-command">
+            <span>ORDER</span>
+            <strong id="telegraphCommand">STOP</strong>
+          </div>
+        </div>
+        <div
+          class="central-telegraph"
+          id="centralTelegraph"
+          role="slider"
+          tabindex="0"
+          aria-label="主機車鐘檔位 Engine telegraph order"
+          aria-valuemin="0"
+          aria-valuemax="8"
+          aria-valuenow="4"
+          aria-valuetext="Stop"
+        >
+          <div class="telegraph-face">
+            <span class="telegraph-zone astern-zone">ASTERN</span>
+            <span class="telegraph-zone stop-zone">STOP</span>
+            <span class="telegraph-zone ahead-zone">AHEAD</span>
+            <span class="telegraph-tick tick-1" aria-hidden="true"></span>
+            <span class="telegraph-tick tick-2" aria-hidden="true"></span>
+            <span class="telegraph-tick tick-3" aria-hidden="true"></span>
+            <span class="telegraph-tick tick-4" aria-hidden="true"></span>
+            <span class="telegraph-tick tick-5" aria-hidden="true"></span>
+            <span class="telegraph-tick tick-6" aria-hidden="true"></span>
+            <span class="telegraph-tick tick-7" aria-hidden="true"></span>
+            <span class="telegraph-tick tick-8" aria-hidden="true"></span>
+            <span class="telegraph-tick tick-9" aria-hidden="true"></span>
+            <div class="telegraph-lever" id="telegraphLever" aria-hidden="true">
+              <span class="lever-grip"></span>
+            </div>
+            <span class="telegraph-pivot" aria-hidden="true"></span>
+          </div>
+        </div>
+        <div class="telegraph-shifter">
+          <button type="button" id="telegraphMinus" aria-label="往倒俥方向退一檔">−</button>
+          <div class="notch-readout">
+            <span id="telegraphNotch">5 / 9</span>
+            <small>－ ASTERN&nbsp;&nbsp;|&nbsp;&nbsp;AHEAD ＋</small>
+          </div>
+          <button type="button" id="telegraphPlus" aria-label="往前進方向升一檔">＋</button>
+        </div>
+      </section>
+    </div>
   </section>
 
   <!-- RIGHT: Instruments -->
@@ -182,6 +278,6 @@
 <script src="audio.js"></script>
 <script src="gauges.js"></script>
 <script src="render.js?v=berth-line-8"></script>
-<script src="main.js?v=3d-ship-roll-2"></script>
+<script src="main.js?v=ship-controls-3"></script>
 </body>
 </html>
